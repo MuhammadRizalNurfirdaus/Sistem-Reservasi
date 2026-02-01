@@ -37,7 +37,7 @@ export default function ReservationCard({ reservation, onCancel }: ReservationCa
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case 'PENDING': return 'Menunggu';
+            case 'PENDING': return 'Menunggu Konfirmasi';
             case 'CONFIRMED': return 'Dikonfirmasi';
             case 'CANCELLED': return 'Dibatalkan';
             case 'COMPLETED': return 'Selesai';
@@ -45,45 +45,103 @@ export default function ReservationCard({ reservation, onCancel }: ReservationCa
         }
     };
 
+    const getLocationDisplay = () => {
+        if (!reservation.location) return null;
+        try {
+            const addr = JSON.parse(reservation.location);
+            if (addr && typeof addr === 'object') {
+                return `${addr.street || ''}, ${addr.kelurahan || ''}, ${addr.city || ''}`;
+            }
+        } catch {
+            return reservation.location;
+        }
+        return reservation.location;
+    };
+
+    const getPaymentMethod = () => {
+        if (!reservation.notes) return null;
+        const match = reservation.notes.match(/Metode Pembayaran: (.+?)(\n|$)/);
+        return match ? match[1] : null;
+    };
+
+    const locationDisplay = getLocationDisplay();
+    const paymentMethod = getPaymentMethod();
+
     return (
-        <div className="reservation-card">
-            <div className="reservation-image">
+        <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            display: 'flex',
+            transition: 'box-shadow 0.2s'
+        }}>
+            <div style={{ width: '140px', flexShrink: 0 }}>
                 <img
-                    src={reservation.serviceItem.imageUrl || reservation.serviceItem.service?.imageUrl || 'https://via.placeholder.com/100'}
+                    src={reservation.serviceItem.imageUrl || reservation.serviceItem.service?.imageUrl || 'https://via.placeholder.com/140'}
                     alt={reservation.serviceItem.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: '140px' }}
                 />
             </div>
-            <div className="reservation-content">
-                <div className="reservation-service">
-                    {reservation.serviceItem.service?.icon} {reservation.serviceItem.service?.name}
-                </div>
-                <h3 className="reservation-item">{reservation.serviceItem.name}</h3>
-                <div className="reservation-details">
-                    <div className="reservation-detail">
-                        📅 {formatDate(reservation.date)}
+            <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div>
+                            <div style={{ fontSize: '12px', color: 'var(--primary-600)', fontWeight: 600, marginBottom: '4px' }}>
+                                {reservation.serviceItem.service?.icon} {reservation.serviceItem.service?.name}
+                            </div>
+                            <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{reservation.serviceItem.name}</h3>
+                        </div>
+                        <span className={`status-badge ${getStatusClass(reservation.status)}`} style={{
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 600
+                        }}>
+                            {getStatusLabel(reservation.status)}
+                        </span>
                     </div>
-                    <div className="reservation-detail">
-                        🕐 {reservation.time}
+                    
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '14px', color: 'var(--gray-600)', marginTop: '12px' }}>
+                        <div>📅 {formatDate(reservation.date)}</div>
+                        <div>🕐 {reservation.time} WIB</div>
+                        <div style={{ fontWeight: 600, color: 'var(--primary-600)' }}>💰 {formatPrice(reservation.serviceItem.price)}</div>
                     </div>
-                    <div className="reservation-detail">
-                        💰 {formatPrice(reservation.serviceItem.price)}
-                    </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span className={`status-badge ${getStatusClass(reservation.status)}`}>
-                        {getStatusLabel(reservation.status)}
-                    </span>
-                    {reservation.status === 'PENDING' && onCancel && (
-                        <div className="reservation-actions">
-                            <button
-                                className="btn btn-sm btn-secondary"
-                                onClick={() => onCancel(reservation.id)}
-                            >
-                                Batalkan
-                            </button>
+
+                    {(locationDisplay || reservation.contactPhone || paymentMethod) && (
+                        <div style={{ 
+                            marginTop: '12px', 
+                            paddingTop: '12px', 
+                            borderTop: '1px solid var(--gray-100)',
+                            display: 'grid',
+                            gap: '6px',
+                            fontSize: '13px',
+                            color: 'var(--gray-500)'
+                        }}>
+                            {locationDisplay && (
+                                <div>📍 {locationDisplay}</div>
+                            )}
+                            {reservation.contactPhone && (
+                                <div>📱 {reservation.contactPhone}</div>
+                            )}
+                            {paymentMethod && (
+                                <div>💳 {paymentMethod}</div>
+                            )}
                         </div>
                     )}
                 </div>
+
+                {reservation.status === 'PENDING' && onCancel && (
+                    <div style={{ marginTop: '16px' }}>
+                        <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => onCancel(reservation.id)}
+                            style={{ fontSize: '13px' }}
+                        >
+                            ❌ Batalkan Reservasi
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

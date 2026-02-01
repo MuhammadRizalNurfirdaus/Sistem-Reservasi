@@ -39,17 +39,25 @@ const upload = multer({
 
 const router = Router();
 
+// Check if Google OAuth is configured
+const isGoogleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
 // Initiate Google OAuth login
-router.get('/google',
+router.get('/google', (req, res, next) => {
+    if (!isGoogleConfigured) {
+        return res.status(503).json({ 
+            error: 'Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.' 
+        });
+    }
     passport.authenticate('google', {
         scope: ['profile', 'email']
-    })
-);
+    })(req, res, next);
+});
 
 // Register with email/password
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, phone, address } = req.body;
 
         // Check if user exists
         const existing = await prisma.user.findUnique({
@@ -66,7 +74,9 @@ router.post('/register', async (req, res) => {
             data: {
                 name,
                 email,
-                password: hashedPassword
+                password: hashedPassword,
+                phone: phone || null,
+                address: address || null
             }
         });
 
@@ -138,6 +148,8 @@ router.get('/me', (req, res) => {
                 id: req.user.id,
                 email: req.user.email,
                 name: req.user.name,
+                phone: req.user.phone,
+                address: req.user.address,
                 avatar: req.user.avatar,
                 role: req.user.role
             }
@@ -168,8 +180,12 @@ router.put('/me', isAuthenticated, upload.single('avatar'), async (req, res) => 
     try {
         if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
-        const { name, password, confirmPassword } = req.body;
+        const { name, phone, address, password, confirmPassword } = req.body;
         const updateData: any = { name };
+
+        // Update phone and address
+        if (phone !== undefined) updateData.phone = phone;
+        if (address !== undefined) updateData.address = address;
 
         // Password update
         if (password) {
@@ -181,8 +197,7 @@ router.put('/me', isAuthenticated, upload.single('avatar'), async (req, res) => 
 
         // Avatar update
         if (req.file) {
-            // Should ideally delete old avatar here but skipping for simplicity
-            updateData.avatar = `${process.env.API_URL || 'http://localhost:5000'}/uploads/avatars/${req.file.filename}`;
+            updateData.avatar = `/uploads/avatars/${req.file.filename}`;
         }
 
         const user = await prisma.user.update({
@@ -198,6 +213,8 @@ router.put('/me', isAuthenticated, upload.single('avatar'), async (req, res) => 
                     id: user.id,
                     email: user.email,
                     name: user.name,
+                    phone: user.phone,
+                    address: user.address,
                     avatar: user.avatar,
                     role: user.role
                 }

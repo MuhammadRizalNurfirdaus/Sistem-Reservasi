@@ -1,8 +1,14 @@
 # 🗓️ Sistem Reservasi
 
 > **⚠️ Status: Dalam Pengembangan (Work in Progress)**
+> 
+> Proyek ini masih dalam tahap pengembangan aktif. Beberapa fitur mungkin belum sepenuhnya berfungsi atau dapat berubah sewaktu-waktu.
 
-Sistem Reservasi adalah aplikasi web full-stack untuk manajemen reservasi layanan yang dibangun dengan teknologi modern. Aplikasi ini memungkinkan pengguna untuk memesan berbagai layanan dan admin untuk mengelola reservasi serta layanan yang tersedia.
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/MuhammadRizalNurfirdaus/Sistem-Reservasi.git)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Development-orange?style=for-the-badge)]()
+
+Sistem Reservasi adalah aplikasi web full-stack untuk manajemen reservasi layanan yang dibangun dengan teknologi modern. Aplikasi ini memungkinkan pengguna untuk memesan berbagai layanan, pemilik bisnis untuk memantau performa, dan admin untuk mengelola seluruh sistem.
 
 ## 📋 Daftar Isi
 
@@ -18,18 +24,24 @@ Sistem Reservasi adalah aplikasi web full-stack untuk manajemen reservasi layana
 
 ## ✨ Fitur
 
-### Fitur Pengguna (Customer)
+### 👤 Fitur Customer
 - 🔐 Autentikasi (Register, Login, Google OAuth)
 - 📝 Melihat daftar layanan yang tersedia
 - 📅 Membuat reservasi layanan
-- 📊 Melihat riwayat reservasi
-- 👤 Mengelola profil pengguna
+- 📊 Dashboard dengan riwayat reservasi
+- 👤 Mengelola profil dengan alamat lengkap (Provinsi → Kota → Kecamatan → Desa)
 
-### Fitur Admin
-- 📈 Dashboard statistik reservasi
-- 🛠️ Manajemen layanan (CRUD)
+### 👔 Fitur Owner (Pemilik Bisnis)
+- 📈 Dashboard laporan bisnis
+- 💰 Laporan pendapatan dengan grafik
+- 📊 Statistik reservasi harian/bulanan
+- 📋 Monitoring performa layanan
+
+### 🔧 Fitur Admin
+- 📈 Dashboard statistik lengkap
+- 🛠️ Manajemen layanan & item (CRUD dengan foto)
 - 📋 Manajemen reservasi (Approve, Reject, Complete)
-- 👥 Melihat data pengguna
+- 👥 Manajemen pengguna
 
 ## 🛠️ Tech Stack
 
@@ -86,12 +98,72 @@ Sistem-Reservasi/
 
 ## 🚀 Instalasi
 
-### Prasyarat
+### Opsi 1: Docker (Direkomendasikan) 🐳
+
+Cara termudah untuk menjalankan aplikasi ini adalah menggunakan Docker.
+
+#### Prasyarat
+- Docker & Docker Compose
+
+#### Langkah Instalasi dengan Docker
+
+1. **Clone repository**
+   ```bash
+   git clone https://github.com/MuhammadRizalNurfirdaus/Sistem-Reservasi.git
+   cd Sistem-Reservasi
+   ```
+
+2. **Jalankan dengan Docker**
+   ```bash
+   # Buat file .env dari template
+   cp .env.example .env
+   
+   # Build dan jalankan
+   docker compose up -d --build
+   
+   # Tunggu sampai container berjalan, lalu jalankan migrasi dan seeding
+   docker compose exec backend npx prisma db push
+   docker compose exec backend npx tsx prisma/seed.ts
+   ```
+
+3. **Akses Aplikasi**
+   - Frontend: http://localhost
+   - Backend API: http://localhost:5000
+   - Database: localhost:5433
+
+4. **Login Akun Default**
+   
+   | Role | Email | Password |
+   |------|-------|----------|
+   | Admin | `admin@gmail.com` | `adminRizal123` |
+   | Owner | `owner@gmail.com` | `ownerRizal123` |
+   | Customer | Login dengan Google OAuth | - |
+
+#### Docker Commands
+```bash
+# Lihat logs
+docker compose logs -f
+
+# Stop aplikasi
+docker compose down
+
+# Restart
+docker compose restart
+
+# Rebuild setelah perubahan kode
+docker compose up -d --build
+```
+
+---
+
+### Opsi 2: Manual Installation
+
+#### Prasyarat
 - Node.js (v18 atau lebih baru)
 - PostgreSQL
 - npm atau yarn
 
-### Langkah Instalasi
+#### Langkah Instalasi
 
 1. **Clone repository**
    ```bash
@@ -262,16 +334,14 @@ cd frontend && npm run build
 
 > *Screenshots akan ditambahkan setelah development selesai*
 
-## 🤝 Kontributor
-
-- **Muhammad Rizal Nurfirdaus** - *Developer* - [GitHub](https://github.com/MuhammadRizalNurfirdaus)
-
-## 📄 Lisensi
-
-Project ini dilisensikan di bawah [MIT License](LICENSE).
-
 ## 🔮 Roadmap
 
+- [x] Multi-role System (Admin, Owner, Customer)
+- [x] Google OAuth Integration
+- [x] Cascading Address Dropdown (Provinsi → Kota → Kecamatan → Desa)
+- [x] Admin Dashboard dengan Statistik
+- [x] Owner Dashboard dengan Laporan Bisnis
+- [x] Manajemen Layanan & Item dengan Foto
 - [ ] Unit Testing
 - [ ] Payment Integration
 - [ ] Email Notifications
@@ -279,8 +349,40 @@ Project ini dilisensikan di bawah [MIT License](LICENSE).
 - [ ] Multi-language Support
 - [ ] Dark Mode
 
+## 🤝 Kontributor
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/MuhammadRizalNurfirdaus">
+        <img src="https://github.com/MuhammadRizalNurfirdaus.png" width="100px;" alt="Muhammad Rizal Nurfirdaus"/><br />
+        <sub><b>Muhammad Rizal Nurfirdaus</b></sub>
+      </a><br />
+      <sub>Developer & Maintainer</sub>
+    </td>
+  </tr>
+</table>
+
+## 📄 Lisensi
+
+Project ini dilisensikan di bawah [MIT License](LICENSE).
+
+---
+
+## ⚖️ Hak Cipta
+
+```
+Copyright (c) 2024-2026 Muhammad Rizal Nurfirdaus
+
+Hak cipta dilindungi undang-undang.
+Dilarang memperbanyak, mendistribusikan, atau menggunakan
+proyek ini untuk tujuan komersial tanpa izin tertulis dari pemilik.
+```
+
 ---
 
 <p align="center">
-  Made with ❤️ by Muhammad Rizal Nurfirdaus
+  <b>🗓️ Sistem Reservasi</b><br>
+  Made with ❤️ by <a href="https://github.com/MuhammadRizalNurfirdaus">Muhammad Rizal Nurfirdaus</a><br><br>
+  <a href="https://github.com/MuhammadRizalNurfirdaus/Sistem-Reservasi.git">⭐ Star this repository</a> jika bermanfaat!
 </p>

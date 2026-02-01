@@ -8,6 +8,7 @@ export default function LoginPage() {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -18,6 +19,8 @@ export default function LoginPage() {
             const user = await loginWithEmail(formData);
             if (user?.role === 'ADMIN') {
                 navigate('/admin');
+            } else if (user?.role === 'OWNER') {
+                navigate('/owner');
             } else {
                 navigate('/dashboard');
             }
@@ -64,14 +67,34 @@ export default function LoginPage() {
                     </div>
                     <div className="form-group">
                         <label className="form-label">Password</label>
-                        <input
-                            type="password"
-                            name="password"
-                            className="form-input"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                className="form-input"
+                                value={formData.password}
+                                onChange={handleChange}
+                                required
+                                style={{ paddingRight: '48px' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '12px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '18px',
+                                    color: 'var(--gray-500)'
+                                }}
+                            >
+                                {showPassword ? '🙈' : '👁️'}
+                            </button>
+                        </div>
                     </div>
                     <button
                         type="submit"

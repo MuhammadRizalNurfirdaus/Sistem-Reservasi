@@ -3,8 +3,10 @@ export interface User {
     id: string;
     email: string;
     name: string;
+    phone?: string | null;
+    address?: string | null;
     avatar?: string | null;
-    role: 'CUSTOMER' | 'ADMIN';
+    role: 'CUSTOMER' | 'ADMIN' | 'OWNER';
 }
 
 // Service type

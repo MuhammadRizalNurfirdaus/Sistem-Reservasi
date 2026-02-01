@@ -164,8 +164,9 @@ async function main() {
     });
 
     // Create Admin
-    const adminEmail = 'admin12345@gmail.com';
-    const hashedPassword = await bcrypt.hash('admin12345', 10); // Updated to admin12345
+    const adminEmail = 'admin@reservasi.com';
+    const adminPassword = 'adminRizal123';
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
     const admin = await prisma.user.upsert({
         where: { email: adminEmail },
@@ -174,13 +175,13 @@ async function main() {
         },
         create: {
             email: adminEmail,
-            name: 'Admin',
+            name: 'admin',
             password: hashedPassword,
             role: 'ADMIN',
             googleId: null
         }
     });
-    console.log('✅ Created admin:', admin.email);
+    console.log('✅ Created admin:', admin.email, '| Password:', adminPassword);
 
     console.log('🎉 Seeding completed!');
 }

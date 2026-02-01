@@ -11,6 +11,7 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminServicesPage from './pages/admin/AdminServicesPage';
 import AdminReservationsPage from './pages/admin/AdminReservationsPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
+import OwnerDashboardPage from './pages/owner/OwnerDashboardPage';
 import ServicesPage from './pages/ServicesPage';
 import ServiceDetailPage from './pages/ServiceDetailPage';
 import ReservationFormPage from './pages/ReservationFormPage';
@@ -37,8 +38,12 @@ function App() {
               <Route path="profile" element={<AdminProfilePage />} />
             </Route>
 
+            {/* Owner Routes */}
+            <Route path="/owner" element={<OwnerDashboardPage />} />
+
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/services/:id" element={<ServiceDetailPage />} />
+            <Route path="/reserve/:itemId" element={<ReservationFormPage />} />
             <Route path="/book" element={<ReservationFormPage />} />
             <Route path="/my-reservations" element={<MyReservationsPage />} />
             <Route path="/profile" element={<ProfilePage />} />

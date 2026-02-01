@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Use relative URL when accessed via nginx proxy, or full URL for direct access
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Generic fetch wrapper with credentials
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -47,7 +48,7 @@ export const authApi = {
         // fetchApi will need to handle this or we override headers
         headers: {}
     }),
-    getGoogleLoginUrl: () => `${API_URL}/auth/google`,
+    getGoogleLoginUrl: () => '/auth/google',
 };
 
 // Services API
@@ -64,6 +65,18 @@ export const servicesApi = {
         body: JSON.stringify(data),
     }),
     delete: (id: string) => fetchApi<{ message: string }>(`/api/services/${id}`, {
+        method: 'DELETE',
+    }),
+    // Service Items API
+    createItem: (serviceId: string, data: any) => fetchApi<import('../types').ServiceItem>(`/api/services/${serviceId}/items`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    updateItem: (id: string, data: any) => fetchApi<import('../types').ServiceItem>(`/api/services/items/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    deleteItem: (id: string) => fetchApi<{ message: string }>(`/api/services/items/${id}`, {
         method: 'DELETE',
     }),
 };

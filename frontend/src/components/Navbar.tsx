@@ -23,8 +23,8 @@ export default function Navbar() {
                         Layanan
                     </Link>
                     {user && (
-                        <Link to="/my-reservations" className={`nav-link ${isActive('/my-reservations') ? 'active' : ''}`}>
-                            Reservasi Saya
+                        <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') || location.pathname.startsWith('/dashboard') ? 'active' : ''}`}>
+                            Akun Saya
                         </Link>
                     )}
                     {user?.role === 'ADMIN' && (

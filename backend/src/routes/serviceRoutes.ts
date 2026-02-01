@@ -120,4 +120,84 @@ router.delete('/:id', isAuthenticated, isAdmin, async (req: Request, res: Respon
     }
 });
 
+// ==================== SERVICE ITEMS CRUD ====================
+
+// Create service item (admin only)
+router.post('/:serviceId/items', isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+        const { name, description, price, duration, imageUrl, isAvailable } = req.body;
+
+        const item = await prisma.serviceItem.create({
+            data: {
+                serviceId: req.params.serviceId,
+                name,
+                description,
+                price: parseFloat(price),
+                duration: duration ? parseInt(duration) : null,
+                imageUrl,
+                isAvailable: isAvailable !== false
+            },
+            include: { service: true }
+        });
+
+        res.status(201).json(item);
+    } catch (error) {
+        console.error('Error creating service item:', error);
+        res.status(500).json({ error: 'Failed to create service item' });
+    }
+});
+
+// Update service item (admin only)
+router.put('/items/:id', isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+        const { name, description, price, duration, imageUrl, isAvailable } = req.body;
+
+        const item = await prisma.serviceItem.update({
+            where: { id: req.params.id },
+            data: {
+                name,
+                description,
+                price: price ? parseFloat(price) : undefined,
+                duration: duration ? parseInt(duration) : null,
+                imageUrl,
+                isAvailable
+            },
+            include: { service: true }
+        });
+
+        res.json(item);
+    } catch (error) {
+        console.error('Error updating service item:', error);
+        res.status(500).json({ error: 'Failed to update service item' });
+    }
+});
+
+// Delete service item (admin only)
+router.delete('/items/:id', isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+        await prisma.serviceItem.delete({
+            where: { id: req.params.id }
+        });
+
+        res.json({ message: 'Service item deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting service item:', error);
+        res.status(500).json({ error: 'Failed to delete service item' });
+    }
+});
+
+// Get all items for a service
+router.get('/:serviceId/items', async (req: Request, res: Response) => {
+    try {
+        const items = await prisma.serviceItem.findMany({
+            where: { serviceId: req.params.serviceId },
+            orderBy: { price: 'asc' }
+        });
+        res.json(items);
+    } catch (error) {
+        console.error('Error fetching service items:', error);
+        res.status(500).json({ error: 'Failed to fetch service items' });
+    }
+});
+
 export default router;
