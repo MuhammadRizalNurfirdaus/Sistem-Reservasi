@@ -10,6 +10,8 @@ import ReservationCard from '../components/ReservationCard';
 
 type TabType = 'ringkasan' | 'reservasi' | 'profil' | 'alamat' | 'bantuan';
 
+interface Wilayah { id: string; name: string; }
+
 export default function DashboardPage() {
     const { user, checkAuth } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -21,6 +23,7 @@ export default function DashboardPage() {
     // Profile form state
     const [isEditing, setIsEditing] = useState(false);
     const [profileLoading, setProfileLoading] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [formData, setFormData] = useState({
         name: '',
@@ -28,9 +31,60 @@ export default function DashboardPage() {
         address: '',
         password: '',
         confirmPassword: '',
+        // Address fields
+        provinsiId: '',
+        kabupatenId: '',
+        kecamatanId: '',
+        desaId: '',
+        alamatDetail: ''
     });
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+    // Address data
+    const [provinsiList, setProvinsiList] = useState<Wilayah[]>([]);
+    const [kabupatenList, setKabupatenList] = useState<Wilayah[]>([]);
+    const [kecamatanList, setKecamatanList] = useState<Wilayah[]>([]);
+    const [desaList, setDesaList] = useState<Wilayah[]>([]);
+    const [addressNames, setAddressNames] = useState({ provinsi: '', kabupaten: '', kecamatan: '', desa: '' });
+
+    // Fetch Provinsi
+    useEffect(() => {
+        fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
+            .then(res => res.json())
+            .then(data => setProvinsiList(data))
+            .catch(err => console.error('Error fetching provinsi:', err));
+    }, []);
+
+    // Fetch Kabupaten
+    useEffect(() => {
+        if (formData.provinsiId) {
+            fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${formData.provinsiId}.json`)
+                .then(res => res.json())
+                .then(data => setKabupatenList(data))
+                .catch(err => console.error('Error fetching kabupaten:', err));
+        }
+    }, [formData.provinsiId]);
+
+    // Fetch Kecamatan
+    useEffect(() => {
+        if (formData.kabupatenId) {
+            fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/districts/${formData.kabupatenId}.json`)
+                .then(res => res.json())
+                .then(data => setKecamatanList(data))
+                .catch(err => console.error('Error fetching kecamatan:', err));
+        }
+    }, [formData.kabupatenId]);
+
+    // Fetch Desa
+    useEffect(() => {
+        if (formData.kecamatanId) {
+            fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/villages/${formData.kecamatanId}.json`)
+                .then(res => res.json())
+                .then(data => setDesaList(data))
+                .catch(err => console.error('Error fetching desa:', err));
+        }
+    }, [formData.kecamatanId]);
 
     useEffect(() => {
         if (user) {
@@ -40,6 +94,11 @@ export default function DashboardPage() {
                 address: user.address || '',
                 password: '',
                 confirmPassword: '',
+                provinsiId: '',
+                kabupatenId: '',
+                kecamatanId: '',
+                desaId: '',
+                alamatDetail: user.address || ''
             });
         }
     }, [user]);
@@ -72,6 +131,37 @@ export default function DashboardPage() {
             const file = e.target.files[0];
             setAvatarFile(file);
             setAvatarPreview(URL.createObjectURL(file));
+            setAvatarUploading(true);
+            // Simulate upload animation
+            setTimeout(() => setAvatarUploading(false), 1000);
+        }
+    };
+
+    const handleAddressChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        
+        if (name === 'provinsiId') {
+            const prov = provinsiList.find(p => p.id === value);
+            setAddressNames(prev => ({ ...prev, provinsi: prov?.name || '', kabupaten: '', kecamatan: '', desa: '' }));
+            setFormData(prev => ({ ...prev, provinsiId: value, kabupatenId: '', kecamatanId: '', desaId: '' }));
+            setKabupatenList([]);
+            setKecamatanList([]);
+            setDesaList([]);
+        } else if (name === 'kabupatenId') {
+            const kab = kabupatenList.find(k => k.id === value);
+            setAddressNames(prev => ({ ...prev, kabupaten: kab?.name || '', kecamatan: '', desa: '' }));
+            setFormData(prev => ({ ...prev, kabupatenId: value, kecamatanId: '', desaId: '' }));
+            setKecamatanList([]);
+            setDesaList([]);
+        } else if (name === 'kecamatanId') {
+            const kec = kecamatanList.find(k => k.id === value);
+            setAddressNames(prev => ({ ...prev, kecamatan: kec?.name || '', desa: '' }));
+            setFormData(prev => ({ ...prev, kecamatanId: value, desaId: '' }));
+            setDesaList([]);
+        } else if (name === 'desaId') {
+            const des = desaList.find(d => d.id === value);
+            setAddressNames(prev => ({ ...prev, desa: des?.name || '' }));
+            setFormData(prev => ({ ...prev, desaId: value }));
         }
     };
 
@@ -84,7 +174,17 @@ export default function DashboardPage() {
             const data = new FormData();
             data.append('name', formData.name);
             data.append('phone', formData.phone);
-            data.append('address', formData.address);
+            
+            // Build full address
+            const fullAddress = [
+                formData.alamatDetail,
+                addressNames.desa ? `Desa ${addressNames.desa}` : '',
+                addressNames.kecamatan ? `Kec. ${addressNames.kecamatan}` : '',
+                addressNames.kabupaten,
+                addressNames.provinsi
+            ].filter(Boolean).join(', ') || formData.address;
+            
+            data.append('address', fullAddress);
             
             if (formData.password) {
                 if (formData.password !== formData.confirmPassword) {
@@ -178,6 +278,33 @@ export default function DashboardPage() {
     return (
         <div className="min-h-screen flex flex-col" style={{ background: 'var(--gray-50)' }}>
             <Navbar />
+
+            {/* Owner Banner */}
+            {user.role === 'OWNER' && (
+                <div style={{ 
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)', 
+                    padding: '12px 0',
+                    textAlign: 'center'
+                }}>
+                    <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+                        <span style={{ color: 'white', fontWeight: 600 }}>👑 Anda login sebagai Owner</span>
+                        <Link 
+                            to="/owner" 
+                            style={{ 
+                                padding: '8px 20px', 
+                                background: 'white', 
+                                color: '#d97706', 
+                                borderRadius: '20px', 
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Buka Dashboard Owner →
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))', padding: '32px 0' }}>
@@ -386,34 +513,196 @@ export default function DashboardPage() {
                                     </>
                                 ) : (
                                     <form onSubmit={handleProfileSubmit}>
-                                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                                            <img src={getAvatarUrl()} alt={user.name} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', marginBottom: '16px' }} />
-                                            <div>
-                                                <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer' }}>
-                                                    📷 Ganti Foto
+                                        {/* Avatar with overlay button */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '24px' }}>
+                                            <div style={{ position: 'relative' }}>
+                                                <img 
+                                                    src={getAvatarUrl()} 
+                                                    alt={user.name} 
+                                                    style={{ 
+                                                        width: '100px', 
+                                                        height: '100px', 
+                                                        borderRadius: '50%', 
+                                                        objectFit: 'cover',
+                                                        border: '3px solid var(--primary-200)'
+                                                    }} 
+                                                />
+                                                {avatarUploading && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: 0,
+                                                        borderRadius: '50%',
+                                                        background: 'rgba(0,0,0,0.5)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <div style={{
+                                                            width: '30px',
+                                                            height: '30px',
+                                                            border: '3px solid white',
+                                                            borderTopColor: 'transparent',
+                                                            borderRadius: '50%',
+                                                            animation: 'spin 1s linear infinite'
+                                                        }} />
+                                                    </div>
+                                                )}
+                                                <label style={{
+                                                    position: 'absolute',
+                                                    bottom: '0',
+                                                    right: '0',
+                                                    background: 'var(--primary-500)',
+                                                    color: 'white',
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    borderRadius: '50%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                    border: '2px solid white',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                    transition: 'transform 0.2s'
+                                                }}>
+                                                    <span style={{ fontSize: '14px' }}>📷</span>
                                                     <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
                                                 </label>
                                             </div>
+                                            <div>
+                                                <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>{user.name}</h3>
+                                                <p style={{ color: 'var(--gray-500)', fontSize: '14px' }}>{user.email}</p>
+                                                {avatarFile && (
+                                                    <span style={{ 
+                                                        display: 'inline-block',
+                                                        marginTop: '8px',
+                                                        fontSize: '12px', 
+                                                        color: 'var(--success-600)',
+                                                        background: 'var(--success-50)',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '8px'
+                                                    }}>
+                                                        ✅ Foto baru dipilih
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
+
                                         <div style={{ display: 'grid', gap: '16px' }}>
                                             <div className="form-group">
-                                                <label className="form-label">Nama Lengkap</label>
+                                                <label className="form-label">👤 Nama Lengkap</label>
                                                 <input className="form-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
                                             </div>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                                 <div className="form-group">
-                                                    <label className="form-label">Telepon</label>
+                                                    <label className="form-label">📱 Telepon</label>
                                                     <input className="form-input" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="08xxxxxxxxxx" />
                                                 </div>
                                                 <div className="form-group">
-                                                    <label className="form-label">Email</label>
+                                                    <label className="form-label">📧 Email</label>
                                                     <input className="form-input" value={user.email} disabled style={{ background: 'var(--gray-100)' }} />
                                                 </div>
                                             </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Alamat</label>
-                                                <textarea className="form-input" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} rows={2} />
+                                            
+                                            {/* Alamat Lengkap Section */}
+                                            <div style={{ 
+                                                background: 'var(--gray-50)', 
+                                                padding: '20px', 
+                                                borderRadius: '12px',
+                                                border: '1px solid var(--gray-200)'
+                                            }}>
+                                                <label className="form-label" style={{ marginBottom: '16px', display: 'block' }}>
+                                                    📍 Alamat Lengkap
+                                                </label>
+                                                
+                                                {/* Provinsi & Kabupaten */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                                                    <select
+                                                        name="provinsiId"
+                                                        className="form-input"
+                                                        value={formData.provinsiId}
+                                                        onChange={handleAddressChange}
+                                                        style={{ fontSize: '14px' }}
+                                                    >
+                                                        <option value="">-- Pilih Provinsi --</option>
+                                                        {provinsiList.map(p => (
+                                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <select
+                                                        name="kabupatenId"
+                                                        className="form-input"
+                                                        value={formData.kabupatenId}
+                                                        onChange={handleAddressChange}
+                                                        disabled={!formData.provinsiId}
+                                                        style={{ fontSize: '14px' }}
+                                                    >
+                                                        <option value="">-- Kota/Kabupaten --</option>
+                                                        {kabupatenList.map(k => (
+                                                            <option key={k.id} value={k.id}>{k.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Kecamatan & Desa */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                                                    <select
+                                                        name="kecamatanId"
+                                                        className="form-input"
+                                                        value={formData.kecamatanId}
+                                                        onChange={handleAddressChange}
+                                                        disabled={!formData.kabupatenId}
+                                                        style={{ fontSize: '14px' }}
+                                                    >
+                                                        <option value="">-- Kecamatan --</option>
+                                                        {kecamatanList.map(k => (
+                                                            <option key={k.id} value={k.id}>{k.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <select
+                                                        name="desaId"
+                                                        className="form-input"
+                                                        value={formData.desaId}
+                                                        onChange={handleAddressChange}
+                                                        disabled={!formData.kecamatanId}
+                                                        style={{ fontSize: '14px' }}
+                                                    >
+                                                        <option value="">-- Desa/Kelurahan --</option>
+                                                        {desaList.map(d => (
+                                                            <option key={d.id} value={d.id}>{d.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Detail Alamat */}
+                                                <textarea 
+                                                    className="form-input" 
+                                                    value={formData.alamatDetail} 
+                                                    onChange={e => setFormData({...formData, alamatDetail: e.target.value})} 
+                                                    rows={2}
+                                                    placeholder="Nama jalan, RT/RW, nomor rumah, patokan..."
+                                                    style={{ fontSize: '14px', resize: 'none' }}
+                                                />
+                                                
+                                                {/* Preview alamat */}
+                                                {(addressNames.provinsi || formData.alamatDetail) && (
+                                                    <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', fontSize: '13px' }}>
+                                                        <span style={{ color: 'var(--gray-500)' }}>Preview: </span>
+                                                        <span style={{ color: 'var(--gray-700)' }}>
+                                                            {[
+                                                                formData.alamatDetail,
+                                                                addressNames.desa ? `Desa ${addressNames.desa}` : '',
+                                                                addressNames.kecamatan ? `Kec. ${addressNames.kecamatan}` : '',
+                                                                addressNames.kabupaten,
+                                                                addressNames.provinsi
+                                                            ].filter(Boolean).join(', ')}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
+
                                             <div style={{ background: 'var(--gray-50)', padding: '16px', borderRadius: '12px' }}>
                                                 <p style={{ fontSize: '14px', color: 'var(--gray-500)', marginBottom: '12px' }}>🔐 Ganti Password (Kosongkan jika tidak ingin ubah)</p>
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -425,7 +714,20 @@ export default function DashboardPage() {
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                                             <button type="button" onClick={() => setIsEditing(false)} className="btn btn-outline" style={{ flex: 1 }}>Batal</button>
                                             <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={profileLoading}>
-                                                {profileLoading ? 'Menyimpan...' : '💾 Simpan'}
+                                                {profileLoading ? (
+                                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                                        <span style={{
+                                                            width: '16px',
+                                                            height: '16px',
+                                                            border: '2px solid white',
+                                                            borderTopColor: 'transparent',
+                                                            borderRadius: '50%',
+                                                            animation: 'spin 1s linear infinite',
+                                                            display: 'inline-block'
+                                                        }} />
+                                                        Menyimpan...
+                                                    </span>
+                                                ) : '💾 Simpan'}
                                             </button>
                                         </div>
                                     </form>

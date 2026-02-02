@@ -27,6 +27,9 @@ services:
       dockerfile: Dockerfile
     container_name: reservasi_backend
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       NODE_ENV: production
       PORT: 5000

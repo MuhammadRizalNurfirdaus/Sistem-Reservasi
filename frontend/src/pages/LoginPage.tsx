@@ -1,14 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
-    const { loginWithGoogle, loginWithEmail } = useAuth();
+    const { user, loading: authLoading, loginWithGoogle, loginWithEmail } = useAuth();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    // Redirect jika sudah login
+    useEffect(() => {
+        if (!authLoading && user) {
+            if (user.role === 'ADMIN') {
+                navigate('/admin', { replace: true });
+            } else if (user.role === 'OWNER') {
+                navigate('/owner', { replace: true });
+            } else {
+                navigate('/dashboard', { replace: true });
+            }
+        }
+    }, [user, authLoading, navigate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

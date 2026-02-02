@@ -259,14 +259,21 @@ export default function ReservationFormPage() {
         setError(null);
 
         try {
+            const paymentMethodMap: Record<string, 'COD' | 'TRANSFER' | 'EWALLET'> = {
+                'cod': 'COD',
+                'transfer': 'TRANSFER',
+                'ewallet': 'EWALLET'
+            };
+            
             await reservationsApi.create({
                 serviceItemId: itemId,
                 date: formData.date,
                 time: formData.time,
                 guestCount: formData.guestCount ? parseInt(formData.guestCount) : undefined,
-                notes: `Metode Pembayaran: ${paymentMethods.find(p => p.id === formData.paymentMethod)?.name || formData.paymentMethod}\n${formData.notes || ''}`,
+                notes: formData.notes || undefined,
                 location: fullAddress,
-                contactPhone: formData.contactPhone || undefined
+                contactPhone: formData.contactPhone || undefined,
+                paymentMethod: paymentMethodMap[formData.paymentMethod] || 'COD'
             });
             setSuccess(true);
             setShowModal(false);

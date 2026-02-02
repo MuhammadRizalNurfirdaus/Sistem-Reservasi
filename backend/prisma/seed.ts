@@ -164,8 +164,8 @@ async function main() {
     });
 
     // Create Admin
-    const adminEmail = 'admin@reservasi.com';
-    const adminPassword = 'adminRizal123';
+    const adminEmail = 'admin@gmail.com';
+    const adminPassword = 'admin123';
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
     const admin = await prisma.user.upsert({
@@ -175,13 +175,33 @@ async function main() {
         },
         create: {
             email: adminEmail,
-            name: 'admin',
+            name: 'Admin',
             password: hashedPassword,
             role: 'ADMIN',
             googleId: null
         }
     });
     console.log('✅ Created admin:', admin.email, '| Password:', adminPassword);
+
+    // Create Owner
+    const ownerEmail = 'owner@gmail.com';
+    const ownerPassword = 'owner123';
+    const hashedOwnerPassword = await bcrypt.hash(ownerPassword, 10);
+
+    const owner = await prisma.user.upsert({
+        where: { email: ownerEmail },
+        update: {
+            password: hashedOwnerPassword // Force update password if exists
+        },
+        create: {
+            email: ownerEmail,
+            name: 'Owner',
+            password: hashedOwnerPassword,
+            role: 'OWNER',
+            googleId: null
+        }
+    });
+    console.log('✅ Created owner:', owner.email, '| Password:', ownerPassword);
 
     console.log('🎉 Seeding completed!');
 }

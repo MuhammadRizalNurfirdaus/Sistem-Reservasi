@@ -48,6 +48,8 @@ export interface Reservation {
     notes?: string | null;
     location?: string | null;
     contactPhone?: string | null;
+    paymentMethod?: 'COD' | 'TRANSFER' | 'EWALLET';
+    isPaid?: boolean;
     status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
     user: User; // Include user relation
     createdAt: string;

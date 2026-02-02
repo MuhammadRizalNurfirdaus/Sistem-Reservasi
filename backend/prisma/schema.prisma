@@ -61,6 +61,12 @@ model ServiceItem {
   updatedAt    DateTime      @updatedAt
 }
 
+enum PaymentMethod {
+  COD
+  TRANSFER
+  EWALLET
+}
+
 model Reservation {
   id            String            @id @default(cuid())
   userId        String
@@ -73,6 +79,8 @@ model Reservation {
   notes         String?
   location      String?
   contactPhone  String?
+  paymentMethod PaymentMethod     @default(COD)
+  isPaid        Boolean           @default(false)
   status        ReservationStatus @default(PENDING)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt

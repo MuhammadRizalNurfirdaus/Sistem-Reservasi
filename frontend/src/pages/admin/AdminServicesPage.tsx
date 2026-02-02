@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { servicesApi } from '../../services/api';
+import { useEffect, useState, useRef } from 'react';
+import { servicesApi, API_URL } from '../../services/api';
 import type { Service, ServiceItem } from '../../types';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -30,6 +30,14 @@ export default function AdminServicesPage() {
         imageUrl: '',
         isAvailable: true
     });
+    const [itemImagePreview, setItemImagePreview] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const itemImageInputRef = useRef<HTMLInputElement>(null);
+
+    // Service Image Upload
+    const [serviceImagePreview, setServiceImagePreview] = useState<string | null>(null);
+    const [uploadingServiceImage, setUploadingServiceImage] = useState(false);
+    const serviceImageInputRef = useRef<HTMLInputElement>(null);
 
     const [saving, setSaving] = useState(false);
 
@@ -41,7 +49,16 @@ export default function AdminServicesPage() {
         try {
             const data = await servicesApi.getAll();
             setServices(data);
-            if (data.length > 0 && !selectedService) {
+            
+            // Update selectedService with fresh data
+            if (selectedService) {
+                const updated = data.find((s: Service) => s.id === selectedService.id);
+                if (updated) {
+                    setSelectedService(updated);
+                } else if (data.length > 0) {
+                    setSelectedService(data[0]);
+                }
+            } else if (data.length > 0) {
                 setSelectedService(data[0]);
             }
         } catch (error) {
@@ -60,7 +77,42 @@ export default function AdminServicesPage() {
             icon: service.icon || '',
             imageUrl: service.imageUrl || ''
         });
+        setServiceImagePreview(service.imageUrl ? getImageUrl(service.imageUrl) : null);
         setIsServiceModalOpen(true);
+    };
+
+    const handleServiceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('File harus berupa gambar');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Ukuran file maksimal 5MB');
+            return;
+        }
+
+        // Preview
+        const reader = new FileReader();
+        reader.onloadend = () => setServiceImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+
+        // Upload
+        setUploadingServiceImage(true);
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+            const result = await servicesApi.uploadItemImage(formData);
+            setServiceForm(prev => ({ ...prev, imageUrl: result.imageUrl }));
+        } catch (error) {
+            alert('Gagal upload gambar');
+            setServiceImagePreview(null);
+        } finally {
+            setUploadingServiceImage(false);
+        }
     };
 
     const handleDeleteService = async (id: string) => {
@@ -101,6 +153,7 @@ export default function AdminServicesPage() {
     const resetServiceForm = () => {
         setEditingService(null);
         setServiceForm({ name: '', description: '', icon: '', imageUrl: '' });
+        setServiceImagePreview(null);
     };
 
     // ============ ITEM HANDLERS ============
@@ -114,6 +167,7 @@ export default function AdminServicesPage() {
             imageUrl: item.imageUrl || '',
             isAvailable: item.isAvailable
         });
+        setItemImagePreview(item.imageUrl ? getImageUrl(item.imageUrl) : null);
         setIsItemModalOpen(true);
     };
 
@@ -125,6 +179,40 @@ export default function AdminServicesPage() {
             } catch (error) {
                 alert('Gagal menghapus item');
             }
+        }
+    };
+
+    const handleItemImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('File harus berupa gambar');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Ukuran file maksimal 5MB');
+            return;
+        }
+
+        // Preview
+        const reader = new FileReader();
+        reader.onloadend = () => setItemImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+
+        // Upload
+        setUploadingImage(true);
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+            const result = await servicesApi.uploadItemImage(formData);
+            setItemForm(prev => ({ ...prev, imageUrl: result.imageUrl }));
+        } catch (error) {
+            alert('Gagal upload gambar');
+            setItemImagePreview(null);
+        } finally {
+            setUploadingImage(false);
         }
     };
 
@@ -149,9 +237,25 @@ export default function AdminServicesPage() {
         }
     };
 
+    const handleToggleAvailability = async (item: ServiceItem) => {
+        try {
+            await servicesApi.updateItem(item.id, { isAvailable: !item.isAvailable });
+            fetchServices();
+        } catch (error) {
+            alert('Gagal mengubah status item');
+        }
+    };
+
     const resetItemForm = () => {
         setEditingItem(null);
         setItemForm({ name: '', description: '', price: '', duration: '', imageUrl: '', isAvailable: true });
+        setItemImagePreview(null);
+    };
+
+    const getImageUrl = (url: string) => {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        return `${API_URL}${url}`;
     };
 
     const formatPrice = (price: number | string) => {
@@ -221,73 +325,172 @@ export default function AdminServicesPage() {
                         </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(3, 1fr)', 
+                        gap: '24px'
+                    }}>
                         {services.map(service => (
                             <div key={service.id} style={{
                                 background: 'white',
                                 borderRadius: '16px',
                                 overflow: 'hidden',
-                                border: '1px solid var(--gray-100)',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-                            }}>
+                                border: '1px solid var(--gray-200)',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-4px)';
+                                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
+                            }}
+                            >
                                 {/* Service Image */}
-                                <div style={{ position: 'relative', height: '160px', background: 'var(--gray-100)' }}>
+                                <div style={{ 
+                                    position: 'relative', 
+                                    height: '180px', 
+                                    background: 'linear-gradient(135deg, var(--gray-100), var(--gray-200))',
+                                    overflow: 'hidden'
+                                }}>
                                     {service.imageUrl ? (
                                         <img
-                                            src={service.imageUrl}
+                                            src={getImageUrl(service.imageUrl)}
                                             alt={service.name}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x200?text=No+Image'; }}
+                                            style={{ 
+                                                width: '100%', 
+                                                height: '100%', 
+                                                objectFit: 'cover',
+                                                objectPosition: 'center'
+                                            }}
+                                            onError={(e) => { 
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                (e.target as HTMLImageElement).parentElement!.querySelector('.fallback-icon')?.classList.remove('hidden');
+                                            }}
                                         />
-                                    ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '64px' }}>
-                                            {service.icon || '📦'}
-                                        </div>
-                                    )}
+                                    ) : null}
+                                    <div 
+                                        className={`fallback-icon ${service.imageUrl ? 'hidden' : ''}`}
+                                        style={{ 
+                                            display: service.imageUrl ? 'none' : 'flex',
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            height: '100%',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            fontSize: '72px',
+                                            background: 'linear-gradient(135deg, var(--primary-50), var(--primary-100))'
+                                        }}
+                                    >
+                                        {service.icon || '📦'}
+                                    </div>
                                     <div style={{
                                         position: 'absolute',
                                         top: '12px',
                                         right: '12px',
-                                        background: 'rgba(0,0,0,0.6)',
+                                        background: 'rgba(0,0,0,0.7)',
                                         color: 'white',
-                                        padding: '6px 12px',
+                                        padding: '6px 14px',
                                         borderRadius: '20px',
                                         fontSize: '13px',
-                                        fontWeight: 600
+                                        fontWeight: 600,
+                                        backdropFilter: 'blur(4px)'
                                     }}>
                                         {service.items?.length || 0} Item
                                     </div>
                                 </div>
 
                                 {/* Service Info */}
-                                <div style={{ padding: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                                        <span style={{ fontSize: '28px' }}>{service.icon || '📦'}</span>
-                                        <h3 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>{service.name}</h3>
+                                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                                        <span style={{ 
+                                            fontSize: '24px',
+                                            width: '40px',
+                                            height: '40px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'var(--primary-50)',
+                                            borderRadius: '10px'
+                                        }}>
+                                            {service.icon || '📦'}
+                                        </span>
+                                        <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--gray-800)' }}>
+                                            {service.name}
+                                        </h3>
                                     </div>
-                                    <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginBottom: '16px', lineHeight: 1.5 }}>
+                                    <p style={{ 
+                                        color: 'var(--gray-500)', 
+                                        fontSize: '14px', 
+                                        marginBottom: '16px', 
+                                        lineHeight: 1.6,
+                                        flex: 1,
+                                        minHeight: '42px'
+                                    }}>
                                         {service.description || 'Tidak ada deskripsi'}
                                     </p>
 
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <button
-                                            className="btn btn-sm"
-                                            style={{ flex: 1, background: 'var(--primary-50)', color: 'var(--primary-600)', border: 'none' }}
+                                            style={{ 
+                                                flex: 1, 
+                                                padding: '10px 16px',
+                                                background: 'var(--primary-50)', 
+                                                color: 'var(--primary-600)', 
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                fontWeight: 600,
+                                                fontSize: '13px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
                                             onClick={() => handleEditService(service)}
+                                            onMouseOver={(e) => e.currentTarget.style.background = 'var(--primary-100)'}
+                                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--primary-50)'}
                                         >
                                             ✏️ Edit
                                         </button>
                                         <button
-                                            className="btn btn-sm"
-                                            style={{ flex: 1, background: 'var(--gray-100)', color: 'var(--gray-600)', border: 'none' }}
+                                            style={{ 
+                                                flex: 1, 
+                                                padding: '10px 16px',
+                                                background: 'var(--gray-100)', 
+                                                color: 'var(--gray-700)', 
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                fontWeight: 600,
+                                                fontSize: '13px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
                                             onClick={() => { setSelectedService(service); setActiveTab('items'); }}
+                                            onMouseOver={(e) => e.currentTarget.style.background = 'var(--gray-200)'}
+                                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--gray-100)'}
                                         >
                                             📦 Kelola Item
                                         </button>
                                         <button
-                                            className="btn btn-sm"
-                                            style={{ background: '#fee2e2', color: '#dc2626', border: 'none' }}
+                                            style={{ 
+                                                padding: '10px 14px',
+                                                background: '#fee2e2', 
+                                                color: '#dc2626', 
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                fontWeight: 600,
+                                                fontSize: '13px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
                                             onClick={() => handleDeleteService(service.id)}
+                                            onMouseOver={(e) => e.currentTarget.style.background = '#fecaca'}
+                                            onMouseOut={(e) => e.currentTarget.style.background = '#fee2e2'}
                                         >
                                             🗑️
                                         </button>
@@ -409,17 +612,24 @@ export default function AdminServicesPage() {
                                                 🖼️
                                             </div>
                                         )}
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '12px',
-                                            right: '12px',
-                                            background: item.isAvailable ? '#16a34a' : '#dc2626',
-                                            color: 'white',
-                                            padding: '4px 10px',
-                                            borderRadius: '20px',
-                                            fontSize: '11px',
-                                            fontWeight: 600
-                                        }}>
+                                        <div 
+                                            onClick={() => handleToggleAvailability(item)}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '12px',
+                                                right: '12px',
+                                                background: item.isAvailable ? '#16a34a' : '#dc2626',
+                                                color: 'white',
+                                                padding: '4px 10px',
+                                                borderRadius: '20px',
+                                                fontSize: '11px',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                            }}
+                                            title={item.isAvailable ? 'Klik untuk nonaktifkan' : 'Klik untuk aktifkan'}
+                                        >
                                             {item.isAvailable ? '✓ Aktif' : '✗ Nonaktif'}
                                         </div>
                                     </div>
@@ -470,22 +680,27 @@ export default function AdminServicesPage() {
             {isServiceModalOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                    padding: '20px'
                 }}>
                     <div style={{ 
                         background: 'white', 
                         borderRadius: '20px', 
                         width: '560px', 
-                        maxWidth: '95%',
-                        maxHeight: '90vh',
+                        maxWidth: '100%',
+                        maxHeight: '85vh',
                         overflow: 'auto'
                     }}>
                         <div style={{ 
-                            padding: '24px', 
+                            padding: '20px 24px', 
                             borderBottom: '1px solid var(--gray-100)',
                             display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            position: 'sticky',
+                            top: 0,
+                            background: 'white',
+                            zIndex: 10
                         }}>
                             <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>
                                 {editingService ? '✏️ Edit Kategori' : '➕ Tambah Kategori Baru'}
@@ -499,32 +714,100 @@ export default function AdminServicesPage() {
                         </div>
                         
                         <form onSubmit={handleServiceSubmit} style={{ padding: '24px' }}>
-                            {/* Image Preview */}
+                            {/* Image Upload */}
                             <div style={{ marginBottom: '20px' }}>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--gray-700)' }}>
                                     Gambar Kategori
                                 </label>
-                                <div style={{ 
-                                    width: '100%', 
-                                    height: '160px', 
-                                    borderRadius: '12px', 
-                                    background: 'var(--gray-100)',
-                                    border: '2px dashed var(--gray-300)',
-                                    overflow: 'hidden'
-                                }}>
-                                    {serviceForm.imageUrl ? (
+                                <input
+                                    type="file"
+                                    ref={serviceImageInputRef}
+                                    accept="image/*"
+                                    onChange={handleServiceImageChange}
+                                    style={{ display: 'none' }}
+                                />
+                                <div 
+                                    onClick={() => serviceImageInputRef.current?.click()}
+                                    style={{ 
+                                        width: '100%', 
+                                        height: '160px', 
+                                        borderRadius: '12px', 
+                                        background: 'var(--gray-100)',
+                                        border: '2px dashed var(--gray-300)',
+                                        overflow: 'hidden',
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary-400)'}
+                                    onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--gray-300)'}
+                                >
+                                    {uploadingServiceImage && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            background: 'rgba(255,255,255,0.9)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            zIndex: 10
+                                        }}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                                                <span style={{ color: 'var(--gray-600)' }}>Mengupload...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {serviceImagePreview || serviceForm.imageUrl ? (
                                         <img
-                                            src={serviceForm.imageUrl}
+                                            src={serviceImagePreview || getImageUrl(serviceForm.imageUrl)}
                                             alt="Preview"
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                         />
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--gray-400)' }}>
-                                            <span style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</span>
-                                            <span>Masukkan URL gambar</span>
+                                            <span style={{ fontSize: '40px', marginBottom: '8px' }}>📷</span>
+                                            <span style={{ fontWeight: 500 }}>Klik untuk upload gambar</span>
+                                            <span style={{ fontSize: '12px', marginTop: '4px' }}>Format: JPG, PNG, WEBP (max 5MB)</span>
                                         </div>
                                     )}
+                                </div>
+                                {(serviceImagePreview || serviceForm.imageUrl) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setServiceImagePreview(null); setServiceForm(prev => ({ ...prev, imageUrl: '' })); }}
+                                        style={{
+                                            marginTop: '8px',
+                                            padding: '6px 12px',
+                                            background: 'var(--error-50)',
+                                            color: 'var(--error)',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        🗑️ Hapus Gambar
+                                    </button>
+                                )}
+                                
+                                {/* URL Option */}
+                                <div style={{ marginTop: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <div style={{ flex: 1, height: '1px', background: 'var(--gray-200)' }}></div>
+                                        <span style={{ fontSize: '12px', color: 'var(--gray-400)' }}>atau masukkan URL</span>
+                                        <div style={{ flex: 1, height: '1px', background: 'var(--gray-200)' }}></div>
+                                    </div>
+                                    <input
+                                        className="form-input"
+                                        value={serviceForm.imageUrl.startsWith('http') ? serviceForm.imageUrl : ''}
+                                        onChange={e => {
+                                            setServiceForm({ ...serviceForm, imageUrl: e.target.value });
+                                            setServiceImagePreview(null);
+                                        }}
+                                        placeholder="https://example.com/image.jpg"
+                                        style={{ fontSize: '13px' }}
+                                    />
                                 </div>
                             </div>
 
@@ -562,21 +845,11 @@ export default function AdminServicesPage() {
                                 />
                             </div>
 
-                            <div className="form-group">
-                                <label className="form-label">URL Gambar</label>
-                                <input
-                                    className="form-input"
-                                    value={serviceForm.imageUrl}
-                                    onChange={e => setServiceForm({ ...serviceForm, imageUrl: e.target.value })}
-                                    placeholder="https://example.com/image.jpg"
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', paddingBottom: '8px' }}>
                                 <button type="button" className="btn btn-outline" onClick={() => setIsServiceModalOpen(false)}>
                                     Batal
                                 </button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                <button type="submit" className="btn btn-primary" disabled={saving || uploadingServiceImage}>
                                     {saving ? '⏳ Menyimpan...' : '💾 Simpan'}
                                 </button>
                             </div>
@@ -623,32 +896,100 @@ export default function AdminServicesPage() {
                         </div>
                         
                         <form onSubmit={handleItemSubmit} style={{ padding: '24px' }}>
-                            {/* Image Preview */}
+                            {/* Image Upload */}
                             <div style={{ marginBottom: '20px' }}>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--gray-700)' }}>
                                     Gambar Item
                                 </label>
-                                <div style={{ 
-                                    width: '100%', 
-                                    height: '140px', 
-                                    borderRadius: '12px', 
-                                    background: 'var(--gray-100)',
-                                    border: '2px dashed var(--gray-300)',
-                                    overflow: 'hidden'
-                                }}>
-                                    {itemForm.imageUrl ? (
+                                <input
+                                    type="file"
+                                    ref={itemImageInputRef}
+                                    accept="image/*"
+                                    onChange={handleItemImageChange}
+                                    style={{ display: 'none' }}
+                                />
+                                <div 
+                                    onClick={() => itemImageInputRef.current?.click()}
+                                    style={{ 
+                                        width: '100%', 
+                                        height: '160px', 
+                                        borderRadius: '12px', 
+                                        background: 'var(--gray-100)',
+                                        border: '2px dashed var(--gray-300)',
+                                        overflow: 'hidden',
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary-400)'}
+                                    onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--gray-300)'}
+                                >
+                                    {uploadingImage && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            background: 'rgba(255,255,255,0.9)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            zIndex: 10
+                                        }}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                                                <span style={{ color: 'var(--gray-600)' }}>Mengupload...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {itemImagePreview || itemForm.imageUrl ? (
                                         <img
-                                            src={itemForm.imageUrl}
+                                            src={itemImagePreview || getImageUrl(itemForm.imageUrl)}
                                             alt="Preview"
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                         />
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--gray-400)' }}>
-                                            <span style={{ fontSize: '40px', marginBottom: '8px' }}>🖼️</span>
-                                            <span>Masukkan URL gambar</span>
+                                            <span style={{ fontSize: '40px', marginBottom: '8px' }}>📷</span>
+                                            <span style={{ fontWeight: 500 }}>Klik untuk upload gambar</span>
+                                            <span style={{ fontSize: '12px', marginTop: '4px' }}>Format: JPG, PNG, WEBP (max 5MB)</span>
                                         </div>
                                     )}
+                                </div>
+                                {(itemImagePreview || itemForm.imageUrl) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setItemImagePreview(null); setItemForm(prev => ({ ...prev, imageUrl: '' })); }}
+                                        style={{
+                                            marginTop: '8px',
+                                            padding: '6px 12px',
+                                            background: 'var(--error-50)',
+                                            color: 'var(--error)',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        🗑️ Hapus Gambar
+                                    </button>
+                                )}
+                                
+                                {/* URL Option */}
+                                <div style={{ marginTop: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <div style={{ flex: 1, height: '1px', background: 'var(--gray-200)' }}></div>
+                                        <span style={{ fontSize: '12px', color: 'var(--gray-400)' }}>atau masukkan URL</span>
+                                        <div style={{ flex: 1, height: '1px', background: 'var(--gray-200)' }}></div>
+                                    </div>
+                                    <input
+                                        className="form-input"
+                                        value={itemForm.imageUrl.startsWith('http') ? itemForm.imageUrl : ''}
+                                        onChange={e => {
+                                            setItemForm({ ...itemForm, imageUrl: e.target.value });
+                                            setItemImagePreview(null);
+                                        }}
+                                        placeholder="https://example.com/image.jpg"
+                                        style={{ fontSize: '13px' }}
+                                    />
                                 </div>
                             </div>
 
@@ -698,16 +1039,6 @@ export default function AdminServicesPage() {
                                         min="0"
                                     />
                                 </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">URL Gambar</label>
-                                <input
-                                    className="form-input"
-                                    value={itemForm.imageUrl}
-                                    onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })}
-                                    placeholder="https://example.com/image.jpg"
-                                />
                             </div>
 
                             <div className="form-group">

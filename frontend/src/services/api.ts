@@ -37,15 +37,20 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // Auth API
 export const authApi = {
-    getMe: () => fetchApi<{ user: import('../types').User | null }>('/auth/me'),
-    logout: () => fetchApi<{ message: string }>('/auth/logout', { method: 'POST' }),
-    login: (data: any) => fetchApi<{ user: import('../types').User }>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-    register: (data: any) => fetchApi<{ user: import('../types').User }>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-    updateProfile: (data: FormData) => fetchApi<{ user: import('../types').User }>('/auth/me', {
+    getMe: () => fetchApi<{ user: import('../types').User | null }>('/api/auth/me'),
+    logout: () => fetchApi<{ message: string }>('/api/auth/logout', { method: 'POST' }),
+    login: (data: any) => fetchApi<{ user: import('../types').User }>('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    register: (data: any) => fetchApi<{ user: import('../types').User }>('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    updateProfile: (data: FormData) => fetchApi<{ user: import('../types').User }>('/api/auth/me', {
         method: 'PUT',
         body: data,
         // When sending FormData, do not set Content-Type header manually
         // fetchApi will need to handle this or we override headers
+        headers: {}
+    }),
+    uploadAvatar: (data: FormData) => fetchApi<{ user: import('../types').User }>('/api/auth/me', {
+        method: 'PUT',
+        body: data,
         headers: {}
     }),
     getGoogleLoginUrl: () => '/auth/google',
@@ -79,11 +84,17 @@ export const servicesApi = {
     deleteItem: (id: string) => fetchApi<{ message: string }>(`/api/services/items/${id}`, {
         method: 'DELETE',
     }),
+    uploadItemImage: (data: FormData) => fetchApi<{ imageUrl: string }>('/api/services/items/upload', {
+        method: 'POST',
+        body: data,
+        headers: {}
+    }),
 };
 
 // Reservations API
 export const reservationsApi = {
     getAll: () => fetchApi<import('../types').Reservation[]>('/api/reservations'),
+    getAllAdmin: () => fetchApi<import('../types').Reservation[]>('/api/reservations/admin'),
     getById: (id: string) => fetchApi<import('../types').Reservation>(`/api/reservations/${id}`),
     create: (data: {
         serviceItemId: string;
@@ -93,6 +104,7 @@ export const reservationsApi = {
         notes?: string;
         location?: string;
         contactPhone?: string;
+        paymentMethod?: 'COD' | 'TRANSFER' | 'EWALLET';
     }) => fetchApi<import('../types').Reservation>('/api/reservations', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -103,6 +115,8 @@ export const reservationsApi = {
         guestCount: number;
         notes: string;
         status: string;
+        isPaid: boolean;
+        paymentMethod: string;
     }>) => fetchApi<import('../types').Reservation>(`/api/reservations/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),

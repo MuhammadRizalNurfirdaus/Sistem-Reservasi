@@ -135,8 +135,8 @@ Cara termudah untuk menjalankan aplikasi ini adalah menggunakan Docker.
    
    | Role | Email | Password |
    |------|-------|----------|
-   | Admin | `admin@gmail.com` | `adminRizal123` |
-   | Owner | `owner@gmail.com` | `ownerRizal123` |
+   | Admin | `admin@gmail.com` | `admin123` |
+   | Owner | `owner@gmail.com` | `owner123` |
    | Customer | Login dengan Google OAuth | - |
 
 #### Docker Commands
@@ -358,10 +358,24 @@ cd frontend && npm run build
         <img src="https://github.com/MuhammadRizalNurfirdaus.png" width="100px;" alt="Muhammad Rizal Nurfirdaus"/><br />
         <sub><b>Muhammad Rizal Nurfirdaus</b></sub>
       </a><br />
-      <sub>Developer & Maintainer</sub>
+      <sub>Developer & Maintainer</sub><br /><br />
+      <a href="https://wa.me/6283101461069">
+        <img src="https://img.shields.io/badge/WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="WhatsApp"/>
+      </a>
+      <a href="https://github.com/MuhammadRizalNurfirdaus">
+        <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
+      </a>
     </td>
   </tr>
 </table>
+
+## 📞 Kontak
+
+Jika ada pertanyaan atau ingin berkolaborasi, hubungi saya:
+
+- 📱 **WhatsApp**: [083101461069](https://wa.me/6283101461069)
+- 🐙 **GitHub**: [@MuhammadRizalNurfirdaus](https://github.com/MuhammadRizalNurfirdaus)
+- 📧 **Email**: muhammadrizalnurfirdaus@gmail.com
 
 ## 📄 Lisensi
 
